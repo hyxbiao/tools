@@ -11,15 +11,14 @@ import sys
 if __name__ == '__main__':
 
 	filename = sys.argv[1]
-	host = sys.argv[2]
-	dst_path = sys.argv[3]
+	host, dst_path = sys.argv[2].split(':')
 
 	basename = os.path.basename(filename)
 	full_path = os.path.join(dst_path, basename)
 
 	sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-	sock.connect((host, 8041))
+	sock.connect((host, 8035))
 
 	content_len = os.path.getsize(filename)
 	head = struct.pack('ii', len(full_path), content_len)
@@ -30,7 +29,7 @@ if __name__ == '__main__':
 		data = fp.read(1024)
 		if not data:
 			break
-		print data
+		#print data
 		sock.send(data)
 	fp.close()
 

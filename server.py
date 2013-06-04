@@ -14,7 +14,8 @@ HEAD_LEN = 8
 if __name__ == '__main__':
 	sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-	sock.bind(('localhost', 8041))
+	local_ip = socket.gethostbyname(socket.gethostname())
+	sock.bind((local_ip, 8035))
 
 	sock.listen(5)
 
