@@ -21,7 +21,7 @@ if __name__ == '__main__':
 	sock.connect((host, 8035))
 
 	content_len = os.path.getsize(filename)
-	head = struct.pack('ii', len(full_path), content_len)
+	head = struct.pack('QQ', len(full_path), content_len)
 	sock.send(head)
 	sock.send(full_path)
 	fp = open(filename, 'rb')

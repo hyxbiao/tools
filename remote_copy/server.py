@@ -9,7 +9,7 @@ import socket
 import struct
 import time
 
-HEAD_LEN = 8
+HEAD_LEN = 16
 
 if __name__ == '__main__':
 	sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -24,7 +24,7 @@ if __name__ == '__main__':
 		try:
 			conn.settimeout(5)
 			head = conn.recv(HEAD_LEN)
-			path_len, content_len = struct.unpack("ii", head)
+			path_len, content_len = struct.unpack("QQ", head)
 			print 'path_len: %d, content_len: %d' % (path_len, content_len)
 			dst_path = conn.recv(path_len)
 			print 'dest path: %s' % dst_path
