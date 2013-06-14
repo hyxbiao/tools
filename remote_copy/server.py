@@ -9,13 +9,28 @@ import socket
 import struct
 import time
 
-HEAD_LEN = 16
+from optparse import OptionParser
+
+HEAD_LEN = 12
+CONTENT_HEAD_LEN = 8
+CMD_SEND_FILE = 1
+CMD_RECV_FILE = 2
 
 if __name__ == '__main__':
+	usage = 'usage: %prog [option]'
+	parser = OptionParser(usage=usage, version='%prog 1.0')
+	parser.add_option('-p', '--port', dest='port', type='int', default=8035, help='port [default: %default]')
+	opt, argv = parser.parse_args()
+
+	if len(argv) > 0:
+		parser.print_help()
+		sys.exit(1)
+
 	sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 	local_ip = socket.gethostbyname(socket.gethostname())
-	sock.bind((local_ip, 8035))
+	print 'host: %s, port: %d' % (local_ip, opt.port)
+	sock.bind((local_ip, opt.port))
 
 	sock.listen(5)
 
@@ -24,22 +39,35 @@ if __name__ == '__main__':
 		try:
 			conn.settimeout(5)
 			head = conn.recv(HEAD_LEN)
-			path_len, content_len = struct.unpack("QQ", head)
-			print 'path_len: %d, content_len: %d' % (path_len, content_len)
-			dst_path = conn.recv(path_len)
-			print 'dest path: %s' % dst_path
-			recv_len = 0
-			content = ''
-			fp = open(dst_path, 'wb')
-			while recv_len <= content_len:
-				data = conn.recv(1024)
-				if not data:
-					break
-				fp.write(data)
-				content += data
-				recv_len += len(data)
-			fp.close()
-			#print content
+			cmd, file1_len, file2_len = struct.unpack("III", head)
+			if cmd == CMD_SEND_FILE:
+				file1 = conn.recv(file1_len)
+				file2 = conn.recv(file2_len)
+				print 'file1: %s, file2: %s' % (file1, file2)
+				file2 = os.path.expanduser(file2)
+				if os.path.isdir(file2):
+					basename = os.path.basename(file1)
+					outfile = os.path.join(file2, basename)
+				elif os.path.isdir(os.path.dirname(file2)):
+					outfile = file2
+				else:
+					print 'no the file or directory: %s' % (file2)
+					sys.exit(1)
+				content_head = conn.recv(CONTENT_HEAD_LEN)
+				content_len = struct.unpack("Q", content_head)
+				print 'content length: %d' % (content_len)
+				recv_len = 0
+				fp = open(outfile, 'wb')
+				while recv_len <= content_len:
+					data = conn.recv(1024)
+					if not data:
+						break
+					fp.write(data)
+					recv_len += len(data)
+				fp.close()
+			else:
+				print 'cmd: %d not support' % cmd
+				sys.exit(1)
 			pass
 		except socket.timeout:
 			print 'time out'
