@@ -5,6 +5,7 @@ __author__="xuanbiao@baidu.com"
 
 
 import os
+import sys
 import socket
 import struct
 import time
@@ -28,6 +29,7 @@ if __name__ == '__main__':
 
 	sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
+	sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 	local_ip = socket.gethostbyname(socket.gethostname())
 	print 'host: %s, port: %d' % (local_ip, opt.port)
 	sock.bind((local_ip, opt.port))
@@ -40,11 +42,11 @@ if __name__ == '__main__':
 			conn.settimeout(5)
 			head = conn.recv(HEAD_LEN)
 			cmd, file1_len, file2_len = struct.unpack("III", head)
+			file1 = conn.recv(file1_len)
+			file2 = conn.recv(file2_len)
+			print 'cmd: %d, file1: %s, file2: %s' % (cmd, file1, file2)
 			if cmd == CMD_SEND_FILE:
-				file1 = conn.recv(file1_len)
-				file2 = conn.recv(file2_len)
-				print 'file1: %s, file2: %s' % (file1, file2)
-				file2 = os.path.expanduser(file2)
+				file2 = os.path.abspath(os.path.expanduser(file2))
 				if os.path.isdir(file2):
 					basename = os.path.basename(file1)
 					outfile = os.path.join(file2, basename)
@@ -65,12 +67,32 @@ if __name__ == '__main__':
 					fp.write(data)
 					recv_len += len(data)
 				fp.close()
+			elif cmd == CMD_RECV_FILE:
+				file1 = os.path.abspath(os.path.expanduser(file1))
+				if not os.path.isfile(file1):
+					print 'file: %s is not a file' % (file1)
+					sys.exit(1)
+				content_len = os.path.getsize(file1)
+				content_head = struct.pack('Q', content_len)
+				conn.send(content_head)
+				fp = open(file1, 'rb')
+				while True:
+					data = fp.read(1024)
+					if not data:
+						break
+					conn.send(data)
+				fp.close()
+				pass
 			else:
 				print 'cmd: %d not support' % cmd
 				sys.exit(1)
 			pass
 		except socket.timeout:
 			print 'time out'
+		except Exception, e:
+			print e
 
+		#print 'close connection sock'
 		conn.close()
 		break
+

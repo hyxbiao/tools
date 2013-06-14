@@ -15,6 +15,8 @@ class Remote:
 	CMD_SEND_FILE = 1
 	CMD_RECV_FILE = 2
 
+	CONTENT_HEAD_LEN = 8
+
 	def __init__(self, host, port):
 		self.host = host
 		self.port = port
@@ -26,15 +28,20 @@ class Remote:
 	
 	def close(self):
 		self.sock.close()
-
-	def sendFile(self, file1, file2):
-		#basename = os.path.basename(file1)
-		#full_path = os.path.join(file2, basename)
-
-		head = struct.pack('III', Remote.CMD_SEND_FILE, len(file1), len(file2))
+	
+	def sendHead(self, cmd, file1, file2):
+		head = struct.pack('III', cmd, len(file1), len(file2))
 		self.sock.send(head)
 		self.sock.send(file1)
 		self.sock.send(file2)
+
+	def sendFile(self, file1, file2):
+		file1 = os.path.abspath(os.path.expanduser(file1))
+		if not os.path.isfile(file1):
+			print 'file: %s is not a file' % (file1)
+			return False
+
+		self.sendHead(Remote.CMD_SEND_FILE, file1, file2)
 
 		content_len = os.path.getsize(file1)
 		content_head = struct.pack('Q', content_len)
@@ -47,9 +54,33 @@ class Remote:
 			#print data
 			self.sock.send(data)
 		fp.close()
+		return True
 
-	def recv(self):
-		pass
+	def recvFile(self, file1, file2):
+		file2 = os.path.abspath(os.path.expanduser(file2))
+		if os.path.isdir(file2):
+			basename = os.path.basename(file1)
+			outfile = os.path.join(file2, basename)
+		elif os.path.isdir(os.path.dirname(file2)):
+			outfile = file2
+		else:
+			print 'no the file or directory: %s' % (file2)
+			return False
+
+		self.sendHead(Remote.CMD_RECV_FILE, file1, file2)
+
+		content_head = self.sock.recv(Remote.CONTENT_HEAD_LEN)
+		content_len = struct.unpack("Q", content_head)
+		print 'content length: %d' % (content_len)
+		recv_len = 0
+		fp = open(outfile, 'wb')
+		while recv_len <= content_len:
+			data = self.sock.recv(1024)
+			if not data:
+				break
+			fp.write(data)
+			recv_len += len(data)
+		fp.close()
 
 if __name__ == '__main__':
 
@@ -83,7 +114,7 @@ if __name__ == '__main__':
 	remote = Remote(host, opt.port)
 	remote.connect()
 	if x0:
-		print 'no support'
+		remote.recvFile(file1, file2)
 	else:
 		remote.sendFile(file1, file2)
 	remote.close()
