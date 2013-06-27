@@ -20,6 +20,7 @@ CMD_RECV_FILE = 2
 if __name__ == '__main__':
 	usage = 'usage: %prog [option]'
 	parser = OptionParser(usage=usage, version='%prog 1.0')
+	parser.add_option('-t', '--host', dest='host', default=None, help='host')
 	parser.add_option('-p', '--port', dest='port', type='int', default=8035, help='port [default: %default]')
 	opt, argv = parser.parse_args()
 
@@ -30,7 +31,10 @@ if __name__ == '__main__':
 	sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 	sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-	local_ip = socket.gethostbyname(socket.gethostname())
+	if opt.host:
+		local_ip = opt.host
+	else:
+		local_ip = socket.gethostbyname(socket.gethostname())
 	print 'host: %s, port: %d' % (local_ip, opt.port)
 	sock.bind((local_ip, opt.port))
 
