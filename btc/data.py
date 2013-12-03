@@ -6,11 +6,15 @@ import time
 import urllib2
 import re
 import simplejson as json
-import threading
+import datetime
 
-g_okcoin_ltc = False
-g_fxbtc_ltc = False
-g_exit_flag = False
+def colored(s, c):
+	cs = dict({
+		'green': '\033[92m',
+		'red':'\033[91m',
+	})
+	endc = '\033[0m'
+	return '%s%s%s' % (cs[c], s, endc)
 
 def http_get(url):
 	req = urllib2.Request(url)
@@ -18,68 +22,50 @@ def http_get(url):
 	content = res.read()
 	return content
 
-class OkCoin(threading.Thread):
+class OkCoin():
 	def __init__(self):
-		self.url = "https://www.okcoin.com"
-		self.pattern = re.compile(r'LTC : ￥<span id="bannerLtcLast">(\d+)<\/span>')
-
-		super(OkCoin, self).__init__()
-	
-	def get_ltc(self):
-		try:
-			content = http_get(self.url)
-			match = self.pattern.search(content)
-			if match:
-				return match.group(1)
-		except:
-			pass
-		return False
-
-	def run(self):
-		global g_okcoin_ltc
-		while not g_exit_flag:
-			g_okcoin_ltc = self.get_ltc()
-			#print "okcoin", price
-			time.sleep(1)
 		pass
 
-class FxBtc(threading.Thread):
-	def __init__(self):
-		self.url = "https://data.fxbtc.com/api?op=query_ticker&symbol=ltc_cny"
-		super(FxBtc, self).__init__()
-
-	def get_ltc(self):
+	def get(self, url):
 		try:
-			content = http_get(self.url)
+			content = http_get(url)
 			ret = json.loads(content)
-			return ret['ticker']['last_rate']
+			return ret
 		except:
 			pass
 		return False
 
-	def run(self):
-		global g_fxbtc_ltc
-		while not g_exit_flag:
-			g_fxbtc_ltc = self.get_ltc()
-			#print "fxbtc", price
-			time.sleep(1)
+	def trades(self, symbol, since):
+		url = 'https://www.okcoin.com/api/trades.do?symbol=%s&since=%d' % (symbol, since)
+		data = self.get(url)
+		return data
+
+	def ltc(self, start, end):
+		since = start
+		step = 120
+		while since < end:
+			data = self.trades('ltc_cny', since)
+			for trade in data:
+				t = datetime.datetime.fromtimestamp(trade['date']).strftime('%Y-%m-%d %H:%M:%S')
+				price = trade['price']
+				if float(price) > 135:
+					continue
+				amount = trade['amount']
+				content = '[%d][%s] %s\t%s' % (trade['tid'], t, price, amount)
+				if float(amount) >= 100:
+					content = colored(content, 'red')
+				print content
+			since += step
+		pass
+
 
 def main():
+	since = int(sys.argv[1])
+	
 	okcoin = OkCoin()
-	okcoin.daemon = True
-	okcoin.start()
 
-	fxbtc = FxBtc()
-	fxbtc.daemon = True
-	fxbtc.start()
+	okcoin.ltc(since, since+10000)
 
-	while True:
-		print "okcoin: ", g_okcoin_ltc, "fxbtc: ", g_fxbtc_ltc
-		#sys.stdout.write("okcoin: %s, fxbtc: %s             \r" % (str(g_okcoin_ltc),str(g_fxbtc_ltc)))
-		#sys.stdout.flush()
-		time.sleep(1)
-	okcoin.join()
-	fxbtc.join()
 
 if __name__ == '__main__':
 	main()
