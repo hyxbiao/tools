@@ -24,6 +24,8 @@ def http_get(url):
 
 class OkCoin():
 	def __init__(self):
+		self._min = 1000.0
+		self._max = 0.0
 		pass
 
 	def get(self, url):
@@ -35,8 +37,11 @@ class OkCoin():
 			pass
 		return False
 
-	def trades(self, symbol, since):
-		url = 'https://www.okcoin.com/api/trades.do?symbol=%s&since=%d' % (symbol, since)
+	def trades(self, symbol, since = None):
+		if since:
+			url = 'https://www.okcoin.com/api/trades.do?symbol=%s&since=%d' % (symbol, since)
+		else:
+			url = 'https://www.okcoin.com/api/trades.do?symbol=%s' % (symbol)
 		data = self.get(url)
 		return data
 
@@ -45,26 +50,43 @@ class OkCoin():
 		step = 120
 		while since < end:
 			data = self.trades('ltc_cny', since)
-			for trade in data:
-				t = datetime.datetime.fromtimestamp(trade['date']).strftime('%Y-%m-%d %H:%M:%S')
-				price = trade['price']
-				if float(price) > 135:
-					continue
-				amount = trade['amount']
-				content = '[%d][%s] %s\t%s' % (trade['tid'], t, price, amount)
-				if float(amount) >= 100:
-					content = colored(content, 'red')
-				print content
+			if data:
+				self._print(data)
 			since += step
 		pass
 
+	def realtime(self):
+		while True:
+			data = self.trades('ltc_cny')
+			if data:
+				self._print(data)
+			time.sleep(1)
+		pass
+
+	def _print(self, data, cond = True):
+		for trade in data:
+			t = datetime.datetime.fromtimestamp(trade['date']).strftime('%Y-%m-%d %H:%M:%S')
+			price = float(trade['price'])
+			if price < self._min:
+				self._min = price
+			elif price > self._max:
+				self._max = price
+			sys.stdout.write("\x1b]2;%.2f     [%.2f,%.2f]\x07" % (price, self._min, self._max))
+			#if float(price) > 135:
+			#	continue
+			amount = trade['amount']
+			content = '[%d][%s] %.2f\t%s' % (trade['tid'], t, price, amount)
+			if float(amount) >= 100:
+				content = colored(content, 'red')
+			print content
 
 def main():
-	since = int(sys.argv[1])
+	#since = int(sys.argv[1])
 	
 	okcoin = OkCoin()
 
-	okcoin.ltc(since, since+10000)
+	#okcoin.ltc(since, since+10000)
+	okcoin.realtime()
 
 
 if __name__ == '__main__':
