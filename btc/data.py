@@ -7,6 +7,8 @@ import urllib2
 import re
 import simplejson as json
 import datetime
+from StringIO import StringIO
+import gzip
 
 def colored(s, c):
 	cs = dict({
@@ -18,8 +20,13 @@ def colored(s, c):
 
 def http_get(url):
 	req = urllib2.Request(url)
-	res = urllib2.urlopen(req, timeout=10)
+	req.add_header('Accept-encoding', 'gzip')
+	res = urllib2.urlopen(req, timeout=20)
 	content = res.read()
+	if res.info().get('Content-Encoding') == 'gzip':
+		buf = StringIO(content)
+		f = gzip.GzipFile(fileobj=buf)
+		content = f.read()
 	return content
 
 class OkCoin():
@@ -56,15 +63,18 @@ class OkCoin():
 		pass
 
 	def realtime(self):
+		since = None
 		while True:
 			data = self.trades('ltc_cny')
 			if data:
-				self._print(data)
+				since = self._print(data, since)
 			time.sleep(1)
 		pass
 
-	def _print(self, data, cond = True):
+	def _print(self, data, last = None, cond = True):
 		for trade in data:
+			if last and trade['tid'] <= last:
+				continue
 			t = datetime.datetime.fromtimestamp(trade['date']).strftime('%Y-%m-%d %H:%M:%S')
 			price = float(trade['price'])
 			if price < self._min:
@@ -79,6 +89,7 @@ class OkCoin():
 			if float(amount) >= 100:
 				content = colored(content, 'red')
 			print content
+		return trade['tid']
 
 def main():
 	#since = int(sys.argv[1])
