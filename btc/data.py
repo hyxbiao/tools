@@ -33,7 +33,9 @@ class OkCoin():
 	def __init__(self):
 		self._min = 1000.0
 		self._max = 0.0
-		pass
+		self._bigtrade = [0., 0.]
+		self._bigamount = [0., 0.]
+		self._bigavg = [0., 0.]
 
 	def get(self, url):
 		try:
@@ -72,6 +74,7 @@ class OkCoin():
 		pass
 
 	def _print(self, data, last = None, cond = True):
+		xtype = ['+', '-']
 		for trade in data:
 			if last and trade['tid'] <= last:
 				continue
@@ -85,8 +88,15 @@ class OkCoin():
 			#if float(price) > 135:
 			#	continue
 			amount = trade['amount']
-			content = '[%d][%s] %.2f\t%s' % (trade['tid'], t, price, amount)
-			if float(amount) >= 100:
+			big_amount = float(amount) if float(amount) >= 100 else False
+			idx = 0 if trade['type'] == 'buy' else 1
+			if big_amount:
+				self._bigamount[idx] +=  big_amount
+				self._bigtrade[idx] +=  big_amount * price
+				self._bigavg[idx] = self._bigtrade[idx] / self._bigamount[idx]
+			bigfmt = '%.2f[%.2f]\t%.2f[%.2f]' % (self._bigamount[0], self._bigavg[0], self._bigamount[1], self._bigavg[1])
+			content = '[%d][%s][%s] %.2f\t%s\t%s' % (trade['tid'], t, xtype[idx], price, amount, bigfmt)
+			if big_amount:
 				content = colored(content, 'red')
 			print content
 		return trade['tid']
