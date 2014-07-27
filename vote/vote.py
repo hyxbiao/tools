@@ -10,6 +10,8 @@ import cookielib
 import json
 import os.path
 import re
+from random import random
+from random import randint
 
 #sdafb=0; OX_plg=swf|sl|pdf|wmp|shk|pm; __atuvc=1%7C30
 
@@ -64,7 +66,7 @@ def checkUser(user, pwd):
         with open(filename, "r") as f:
             lines = f.readlines()
             f.close()
-    except e:
+    except Exception, e:
         return True
     if not lines:
         return True
@@ -84,12 +86,13 @@ def hadVoted(user):
         f.close()
     pass
 
-def visitHome(cookie):
+def visitHome(cookie, ip):
     url = "http://www.soompi.com/seoul-international-drama-awards-2014-vote/"
 
     header={
         "User-Agent": "Mozilla-Firefox5.0",
         "Host": "www.soompi.com",
+        "X-Forwarded-For": ip,
     }
     try:
         cjhandler=urllib2.HTTPCookieProcessor(cookie)
@@ -98,17 +101,18 @@ def visitHome(cookie):
 
         req = urllib2.Request(url, None, header)
         res = urllib2.urlopen(req)
-    except e:
+    except Exception, e:
         print "[Error] %s" % str(e)
         return False
     return res
 
-def checkIsVoted(cookie):
+def checkIsVoted(cookie, ip):
     url = "http://www.soompi.com/seoul-international-drama-awards-2014-vote/"
 
     header={
         "User-Agent": "Mozilla-Firefox5.0",
         "Host": "www.soompi.com",
+        "X-Forwarded-For": ip,
     }
     try:
         cjhandler=urllib2.HTTPCookieProcessor(cookie)
@@ -126,7 +130,7 @@ def checkIsVoted(cookie):
             return int(m.group(1)) == 1
         else:
             return False
-    except e:
+    except Exception, e:
         print "[Error] %s" % str(e)
         return False
     return False
@@ -136,21 +140,13 @@ def addCookie(cookie):
     cookie.set_cookie(makeCookie("__atuvc", "1%7C30"))
     cookie.set_cookie(makeCookie("sdafb", "0"))
 
-def visitLogin(cookie):
-    url = "http://www.soompi.com/login/?redirect_to=%2Fseoul-international-drama-awards-2014-vote%2F%23voting"
-    pass
-
-def addCookie(cookie):
-    cookie.set_cookie(makeCookie("OX_plg", "swf|sl|pdf|wmp|shk|pm"))
-    cookie.set_cookie(makeCookie("__atuvc", "1%7C30"))
-    cookie.set_cookie(makeCookie("sdafb", "0"))
-
-def visitLogin(cookie):
+def visitLogin(cookie, ip):
     url = "http://www.soompi.com/login/?redirect_to=%2Fseoul-international-drama-awards-2014-vote%2F%23voting"
 
     header={
         "User-Agent": "Mozilla-Firefox5.0",
         "Host": "www.soompi.com",
+        "X-Forwarded-For": ip
     }
     cjhandler=urllib2.HTTPCookieProcessor(cookie)
     opener = urllib2.build_opener(cjhandler)
@@ -160,10 +156,12 @@ def visitLogin(cookie):
     res = urllib2.urlopen(req)
     return res
 
-def login(cookie, user, pwd):
+def userLogin(cookie, ip, user, pwd):
     url = "http://www.soompi.com/login/?action=login"
+    #client_id = "%d" % int(random() * sys.maxint)
     data={
         "client_id": "163414424111",
+        #"client_id": client_id,
         "redirect_uri": "http%3A%2F%2Fwww.soompi.com%2Fwp-content%2Fplugins%2Fsocial-connect%2Ffacebook%2Fcallback.php",
         "redirect_uri": "http://www.soompi.com/wp-content/plugins/social-connect/twitter/connect.php",
         "redirect_uri": "http://www.soompi.com/wp-content/plugins/social-connect/google/connect.php",
@@ -181,7 +179,8 @@ def login(cookie, user, pwd):
         "Content-Type": "application/x-www-form-urlencoded",
         "Host": "www.soompi.com",
         "Origin": "http://www.soompi.com",
-        "Referer": "http://www.soompi.com/login/?redirect_to=%2Fseoul-international-drama-awards-2014-vote%2F%23voting"
+        "Referer": "http://www.soompi.com/login/?redirect_to=%2Fseoul-international-drama-awards-2014-vote%2F%23voting",
+        "X-Forwarded-For": ip,
     }
     try:
         postdata = urllib.urlencode(data)
@@ -198,17 +197,18 @@ def login(cookie, user, pwd):
         content = res.read(1024)
         if re.search('<title>Login', content):
             return False
-    except e:
+    except Exception, e:
         print "[ERROR] %s" % str(e)
         return False
     return True
 
-def vote(cookie, url, data):
+def vote(cookie, ip, url, data):
     header={
         "User-Agent": "Mozilla-Firefox5.0",
         "Content-Type": "application/x-www-form-urlencoded",
         "Host": "www.soompi.com",
         "Origin": "http://www.soompi.com",
+        "X-Forwarded-For": ip,
     }
     try:
         postdata = urllib.urlencode(data)
@@ -220,17 +220,17 @@ def vote(cookie, url, data):
 
         req = urllib2.Request(url, postdata, header)
         res = urllib2.urlopen(req)
-    except e:
+    except Exception, e:
         print "[ERROR] %s" % str(e)
         return False
     return res
 
-def checkVoteDone(cookie, url):
+def checkVoteDone(cookie, ip, url):
     header={
         "User-Agent": "Mozilla-Firefox5.0",
-        "Content-Type": "application/x-www-form-urlencoded",
         "Host": "www.soompi.com",
         "Origin": "http://www.soompi.com",
+        "X-Forwarded-For": ip,
     }
     #cj = cookielib.CookieJar()
     cjhandler=urllib2.HTTPCookieProcessor(cookie)
@@ -241,28 +241,14 @@ def checkVoteDone(cookie, url):
     res = urllib2.urlopen(req)
     return res
 
-def voteActor(cookie):
-    url = "http://www.soompi.com/seoul-international-drama-awards-2014-vote/"
-    data={
-        "category": "drama",
-        "myVotes": "213"
-    }
-    header={
-        "User-Agent": "Mozilla-Firefox5.0",
-        "Content-Type": "application/x-www-form-urlencoded",
-        "Host": "www.soompi.com",
-        "Origin": "http://www.soompi.com",
-    }
-    postdata = urllib.urlencode(data)
-
-    #cj = cookielib.CookieJar()
-    cjhandler=urllib2.HTTPCookieProcessor(cookie)
-    opener = urllib2.build_opener(cjhandler)
-    urllib2.install_opener(opener)
-
-    req = urllib2.Request(url, postdata, header)
-    res = urllib2.urlopen(req)
-    return res
+def getIp():
+    #a = 10 if randint(0, 1) == 0 else 192
+    a = 10 if randint(0, 1) == 0 else 192
+    b = randint(100, 254)
+    c = randint(1, 254)
+    d = randint(1, 254)
+    ip = "%d.%d.%d.%d" % (a, b, c, d)
+    return ip
 
 def run(user, pwd):
     print "Account user: %s, pwd: %s" % (user, pwd)
@@ -271,21 +257,24 @@ def run(user, pwd):
 
     cookie = cookielib.CookieJar()
 
-    res = visitHome(cookie)
+    ip = getIp()
+    #print "IP: ", ip
+
+    res = visitHome(cookie, ip)
     if not res or res.code != 200:
         print "Access home fail"
         return False, 2
 
-    addCookie(cookie)
+    #addCookie(cookie)
 
     #visitLogin(cookie)
     #print "Access login, cookie: ", cookie
-    res = login(cookie, user, pwd)
+    res = userLogin(cookie, ip, user, pwd)
     if not res:
         print "User: %s Login fail" % user
         return False, 3
 
-    res = checkIsVoted(cookie)
+    res = checkIsVoted(cookie, ip)
     if res:
         print "User: %s had voted" % user
         return False, 4
@@ -295,7 +284,7 @@ def run(user, pwd):
         "category": "drama",
         "myVotes": "213"
     }
-    res = vote(cookie, url, data)
+    res = vote(cookie, ip, url, data)
     if not res or res.code == 200:
         print "Try to vote drama"
     else:
@@ -307,7 +296,7 @@ def run(user, pwd):
         "category": "actor",
         "myVotes": "222"
     }
-    res = vote(cookie, url, data)
+    res = vote(cookie, ip, url, data)
     if not res or res.code == 200:
         print "Try to vote actor"
     else:
@@ -319,7 +308,7 @@ def run(user, pwd):
         "category": "actress",
         "myVotes": "225"
     }
-    res = vote(cookie, url, data)
+    res = vote(cookie, ip, url, data)
     if not res or res.code == 200:
         print "Try to vote actress"
     else:
@@ -327,9 +316,9 @@ def run(user, pwd):
         return False, 7
 
     url = "http://www.soompi.com/seoul-international-drama-awards-2014-vote/?category=drama&last=actress"
-    res = checkVoteDone(cookie, url)
+    res = checkVoteDone(cookie, ip, url)
     data = res.read()
-    with open("debug_%s" % user, "w") as f:
+    with open("./debug/debug_home_%s.html" % user, "w") as f:
         f.write(data)
         f.close()
     if re.search("You're all done voting", data):
@@ -376,6 +365,10 @@ def main():
     voted_dir="./result"
     if not os.path.isdir(voted_dir):
         os.mkdir(voted_dir)
+
+    debug_dir="./debug"
+    if not os.path.isdir(debug_dir):
+        os.mkdir(debug_dir)
 
     filename = "vote.txt"
     accounts = readAccounts(filename)
