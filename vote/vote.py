@@ -310,13 +310,14 @@ def main():
 
     total = len(accounts)
     success = 0
+    has_voted = 0
     fail_accounts = []
 
     for item in accounts:
         user = item[0]
         pwd = item[1]
         retry = 3
-        ret = False
+        ret, status = False, 0
         while retry > 0:
             ret, status = run(user, pwd)
             if ret or status == 4:
@@ -326,7 +327,7 @@ def main():
         if ret:
             success += 1
         else:
-            fail_accounts.append([user, pwd])
+            fail_accounts.append([user, pwd, status])
 
         if sleep_time != 0:
             time.sleep(sleep_time)
@@ -336,10 +337,16 @@ def main():
     for item in fail_accounts:
         user = item[0]
         pwd = item[1]
-        txt = "User: %s vote fail!" % user
+        status = item[2]
+        if status == 4:
+            has_voted += 1
+            txt = "[Voted] %s" % user
+        else:
+            txt = "[Fail ] %s" % user
         print txt
         rf.write(txt + "\n")
-    txt = "\nAccounts total: %d, success: %d, fail: %d" % (total, success, total-success)
+    fail = total - success - has_voted
+    txt = "\nAccounts total: %d, success: %d, fail: %d, had voted: %d" % (total, success, fail, has_voted)
     print txt
     rf.write(txt + "\n")
     rf.close()
