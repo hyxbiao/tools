@@ -116,7 +116,7 @@ def checkIsVoted(cookie):
     content = res.read()
     m = re.search('voted = (\d)', content)
     if m:
-        print "voted: %s" % m.group(1)
+        #print "voted: %s" % m.group(1)
         return int(m.group(1)) == 1
     else:
         return False
@@ -234,14 +234,14 @@ def voteActor(cookie):
 def run(user, pwd):
     print "Account user: %s, pwd: %s" % (user, pwd)
     if not checkUser(user, pwd):
-        return False
+        return False, 1
 
     cookie = cookielib.CookieJar()
 
     res = visitHome(cookie)
     if res.code != 200:
         print "Access home fail"
-        return False
+        return False, 2
 
     addCookie(cookie)
 
@@ -250,12 +250,12 @@ def run(user, pwd):
     res = login(cookie, user, pwd)
     if not res:
         print "User: %s Login fail" % user
-        return False
+        return False, 3
 
     res = checkIsVoted(cookie)
     if res:
         print "User: %s had voted" % user
-        return False
+        return False, 4
 
     url = "http://www.soompi.com/seoul-international-drama-awards-2014-vote/"
     data={
@@ -291,7 +291,7 @@ def run(user, pwd):
         print "Vote actress fail"
 
     hadVoted(user)
-    return True
+    return True, 0
 
 def main():
     socket.setdefaulttimeout(30)
@@ -303,14 +303,47 @@ def main():
     voted_dir="./result"
     if not os.path.isdir(voted_dir):
         os.mkdir(voted_dir)
+
     filename = "vote.txt"
     accounts = readAccounts(filename)
+
+    total = len(accounts)
+    success = 0
+    fail_accounts = []
+
     for item in accounts:
         user = item[0]
         pwd = item[1]
-        run(user, pwd)
+        retry = 3
+        ret = False
+        while retry > 0:
+            ret, status = run(user, pwd)
+            if ret or status == 4:
+                break
+            print "User: %s Vote fail, retry!" % user
+            retry -= 1
+        if ret:
+            success += 1
+        else:
+            fail_accounts.append([user, pwd])
+
         if sleep_time != 0:
             time.sleep(sleep_time)
+
+    rf = open("finish.txt", "w")
+    print "\n\n------------------- FINISH -------------------"
+    for item in fail_accounts:
+        user = item[0]
+        pwd = item[1]
+        txt = "User: %s vote fail!" % user
+        print txt
+        rf.write(txt + "\n")
+    txt = "\nAccounts total: %d, success: %d, fail: %d" % (total, success, total-success)
+    print txt
+    rf.write(txt + "\n")
+    rf.close()
+
+    wait = raw_input()
     return 
 
 
