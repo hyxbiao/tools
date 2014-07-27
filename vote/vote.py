@@ -18,7 +18,8 @@ from random import randint
 def getProxy(proxys):
     if len(proxys) == 0:
         return False
-    return proxys[randint(0, len(proxys)]
+    r = randint(0, len(proxys)-1)
+    return proxys[r]
 
 def makeCookie(name, value):
     return cookielib.Cookie(
@@ -45,10 +46,15 @@ def readProxy(filename):
         print "%s is not exists!" % filename
         return []
 
-    data = []
+    d = []
     with open(filename, "r") as f:
-        data = f.readlines()
+        d = f.readlines()
         f.close()
+    data = []
+    for item in d:
+        item = item.strip()
+        if item:
+            data.append(item)
     return data
 
 def readAccounts(filename):
@@ -380,9 +386,11 @@ def runBatch(accounts, proxys, sleep_time, voted_accounts):
 
     proxy = getProxy(proxys)
     for item in accounts:
+        if proxy:
+            print "Proxy: %s" % proxy
         user = item[0]
         pwd = item[1]
-        retry = 3
+        retry = 2
         ret, status = False, 0
         while retry > 0:
             ret, status = run(proxy, user, pwd)
