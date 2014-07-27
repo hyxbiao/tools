@@ -15,6 +15,11 @@ from random import randint
 
 #sdafb=0; OX_plg=swf|sl|pdf|wmp|shk|pm; __atuvc=1%7C30
 
+def getProxy(proxys):
+    if len(proxys) == 0:
+        return False
+    return proxys[randint(0, len(proxys)]
+
 def makeCookie(name, value):
     return cookielib.Cookie(
         version=0, 
@@ -34,6 +39,17 @@ def makeCookie(name, value):
         comment_url=None,
         rest=None
     )
+
+def readProxy(filename):
+    if not os.path.isfile(filename):
+        print "%s is not exists!" % filename
+        return []
+
+    data = []
+    with open(filename, "r") as f:
+        data = f.readlines()
+        f.close()
+    return data
 
 def readAccounts(filename):
     #f = open(filename, "r")
@@ -92,11 +108,15 @@ def visitHome(cookie, ip):
     header={
         "User-Agent": "Mozilla-Firefox5.0",
         "Host": "www.soompi.com",
-        "X-Forwarded-For": ip,
+        #"X-Forwarded-For": ip,
     }
     try:
         cjhandler=urllib2.HTTPCookieProcessor(cookie)
-        opener = urllib2.build_opener(cjhandler)
+        if ip:
+            proxy = urllib2.ProxyHandler({'http': ip})
+            opener = urllib2.build_opener(cjhandler, proxy)
+        else:
+            opener = urllib2.build_opener(cjhandler)
         urllib2.install_opener(opener)
 
         req = urllib2.Request(url, None, header)
@@ -112,11 +132,16 @@ def checkIsVoted(cookie, ip):
     header={
         "User-Agent": "Mozilla-Firefox5.0",
         "Host": "www.soompi.com",
-        "X-Forwarded-For": ip,
+        #"X-Forwarded-For": ip,
     }
     try:
         cjhandler=urllib2.HTTPCookieProcessor(cookie)
-        opener = urllib2.build_opener(cjhandler)
+        #opener = urllib2.build_opener(cjhandler)
+        if ip:
+            proxy = urllib2.ProxyHandler({'http': ip})
+            opener = urllib2.build_opener(cjhandler, proxy)
+        else:
+            opener = urllib2.build_opener(cjhandler)
         urllib2.install_opener(opener)
 
         req = urllib2.Request(url, None, header)
@@ -146,10 +171,15 @@ def visitLogin(cookie, ip):
     header={
         "User-Agent": "Mozilla-Firefox5.0",
         "Host": "www.soompi.com",
-        "X-Forwarded-For": ip
+        #"X-Forwarded-For": ip
     }
     cjhandler=urllib2.HTTPCookieProcessor(cookie)
-    opener = urllib2.build_opener(cjhandler)
+    #opener = urllib2.build_opener(cjhandler)
+    if ip:
+        proxy = urllib2.ProxyHandler({'http': ip})
+        opener = urllib2.build_opener(cjhandler, proxy)
+    else:
+        opener = urllib2.build_opener(cjhandler)
     urllib2.install_opener(opener)
 
     req = urllib2.Request(url, None, header)
@@ -180,14 +210,19 @@ def userLogin(cookie, ip, user, pwd):
         "Host": "www.soompi.com",
         "Origin": "http://www.soompi.com",
         "Referer": "http://www.soompi.com/login/?redirect_to=%2Fseoul-international-drama-awards-2014-vote%2F%23voting",
-        "X-Forwarded-For": ip,
+        #"X-Forwarded-For": ip,
     }
     try:
         postdata = urllib.urlencode(data)
 
         #cj = cookielib.CookieJar()
         cjhandler=urllib2.HTTPCookieProcessor(cookie)
-        opener = urllib2.build_opener(cjhandler)
+        #opener = urllib2.build_opener(cjhandler)
+        if ip:
+            proxy = urllib2.ProxyHandler({'http': ip})
+            opener = urllib2.build_opener(cjhandler, proxy)
+        else:
+            opener = urllib2.build_opener(cjhandler)
         urllib2.install_opener(opener)
 
         req = urllib2.Request(url, postdata, header)
@@ -208,14 +243,19 @@ def vote(cookie, ip, url, data):
         "Content-Type": "application/x-www-form-urlencoded",
         "Host": "www.soompi.com",
         "Origin": "http://www.soompi.com",
-        "X-Forwarded-For": ip,
+        #"X-Forwarded-For": ip,
     }
     try:
         postdata = urllib.urlencode(data)
 
         #cj = cookielib.CookieJar()
         cjhandler=urllib2.HTTPCookieProcessor(cookie)
-        opener = urllib2.build_opener(cjhandler)
+        #opener = urllib2.build_opener(cjhandler)
+        if ip:
+            proxy = urllib2.ProxyHandler({'http': ip})
+            opener = urllib2.build_opener(cjhandler, proxy)
+        else:
+            opener = urllib2.build_opener(cjhandler)
         urllib2.install_opener(opener)
 
         req = urllib2.Request(url, postdata, header)
@@ -230,11 +270,16 @@ def checkVoteDone(cookie, ip, url):
         "User-Agent": "Mozilla-Firefox5.0",
         "Host": "www.soompi.com",
         "Origin": "http://www.soompi.com",
-        "X-Forwarded-For": ip,
+        #"X-Forwarded-For": ip,
     }
     #cj = cookielib.CookieJar()
     cjhandler=urllib2.HTTPCookieProcessor(cookie)
-    opener = urllib2.build_opener(cjhandler)
+    #opener = urllib2.build_opener(cjhandler)
+    if ip:
+        proxy = urllib2.ProxyHandler({'http': ip})
+        opener = urllib2.build_opener(cjhandler, proxy)
+    else:
+        opener = urllib2.build_opener(cjhandler)
     urllib2.install_opener(opener)
 
     req = urllib2.Request(url, None, header)
@@ -243,22 +288,24 @@ def checkVoteDone(cookie, ip, url):
 
 def getIp():
     #a = 10 if randint(0, 1) == 0 else 192
-    a = 10 if randint(0, 1) == 0 else 192
+    #a = 10 if randint(0, 1) == 0 else 192
+    a = 202
     b = randint(100, 254)
     c = randint(1, 254)
     d = randint(1, 254)
     ip = "%d.%d.%d.%d" % (a, b, c, d)
     return ip
 
-def run(user, pwd):
+def run(proxy, user, pwd):
     print "Account user: %s, pwd: %s" % (user, pwd)
     if not checkUser(user, pwd):
         return False, 1
 
     cookie = cookielib.CookieJar()
 
-    ip = getIp()
+    #ip = getIp()
     #print "IP: ", ip
+    ip = proxy
 
     res = visitHome(cookie, ip)
     if not res or res.code != 200:
@@ -327,17 +374,18 @@ def run(user, pwd):
 
     return False, 10
 
-def runBatch(accounts, sleep_time, voted_accounts):
+def runBatch(accounts, proxys, sleep_time, voted_accounts):
     success = 0
     fail_accounts = []
 
+    proxy = getProxy(proxys)
     for item in accounts:
         user = item[0]
         pwd = item[1]
         retry = 3
         ret, status = False, 0
         while retry > 0:
-            ret, status = run(user, pwd)
+            ret, status = run(proxy, user, pwd)
             if ret or status == 4:
                 break
             print "User: %s Vote fail, retry!" % user
@@ -349,6 +397,7 @@ def runBatch(accounts, sleep_time, voted_accounts):
             voted_accounts.append([user, pwd])
         else:
             fail_accounts.append([user, pwd])
+            proxy = getProxy(proxys)
 
         if sleep_time != 0:
             time.sleep(sleep_time)
@@ -373,12 +422,14 @@ def main():
     filename = "vote.txt"
     accounts = readAccounts(filename)
 
+    proxys = readProxy("proxy.txt")
+
     total = len(accounts)
     success = 0
     voted_accounts = []
     retry = 3
     while retry > 0:
-        nsuccess, fail_accounts = runBatch(accounts, sleep_time, voted_accounts)
+        nsuccess, fail_accounts = runBatch(accounts, proxys, sleep_time, voted_accounts)
         success += nsuccess
         if len(fail_accounts) == 0:
             break
