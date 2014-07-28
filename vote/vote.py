@@ -16,9 +16,12 @@ from random import randint
 #sdafb=0; OX_plg=swf|sl|pdf|wmp|shk|pm; __atuvc=1%7C30
 
 def getProxy(proxys):
-    if len(proxys) == 0:
+    c = len(proxys)
+    if c == 0:
         return False
-    r = randint(0, len(proxys)-1)
+    r = randint(0, c)
+    if r == c:
+        return False
     return proxys[r]
 
 def makeCookie(name, value):
@@ -179,17 +182,20 @@ def visitLogin(cookie, ip):
         "Host": "www.soompi.com",
         #"X-Forwarded-For": ip
     }
-    cjhandler=urllib2.HTTPCookieProcessor(cookie)
-    #opener = urllib2.build_opener(cjhandler)
-    if ip:
-        proxy = urllib2.ProxyHandler({'http': ip})
-        opener = urllib2.build_opener(cjhandler, proxy)
-    else:
-        opener = urllib2.build_opener(cjhandler)
-    urllib2.install_opener(opener)
+    try:
+        cjhandler=urllib2.HTTPCookieProcessor(cookie)
+        #opener = urllib2.build_opener(cjhandler)
+        if ip:
+            proxy = urllib2.ProxyHandler({'http': ip})
+            opener = urllib2.build_opener(cjhandler, proxy)
+        else:
+            opener = urllib2.build_opener(cjhandler)
+        urllib2.install_opener(opener)
 
-    req = urllib2.Request(url, None, header)
-    res = urllib2.urlopen(req)
+        req = urllib2.Request(url, None, header)
+        res = urllib2.urlopen(req)
+    except Exception, e:
+        return False
     return res
 
 def userLogin(cookie, ip, user, pwd):
@@ -278,18 +284,22 @@ def checkVoteDone(cookie, ip, url):
         "Origin": "http://www.soompi.com",
         #"X-Forwarded-For": ip,
     }
-    #cj = cookielib.CookieJar()
-    cjhandler=urllib2.HTTPCookieProcessor(cookie)
-    #opener = urllib2.build_opener(cjhandler)
-    if ip:
-        proxy = urllib2.ProxyHandler({'http': ip})
-        opener = urllib2.build_opener(cjhandler, proxy)
-    else:
-        opener = urllib2.build_opener(cjhandler)
-    urllib2.install_opener(opener)
+    try:
+        #cj = cookielib.CookieJar()
+        cjhandler=urllib2.HTTPCookieProcessor(cookie)
+        #opener = urllib2.build_opener(cjhandler)
+        if ip:
+            proxy = urllib2.ProxyHandler({'http': ip})
+            opener = urllib2.build_opener(cjhandler, proxy)
+        else:
+            opener = urllib2.build_opener(cjhandler)
+        urllib2.install_opener(opener)
 
-    req = urllib2.Request(url, None, header)
-    res = urllib2.urlopen(req)
+        req = urllib2.Request(url, None, header)
+        res = urllib2.urlopen(req)
+    except Exception, e:
+        print "[ERROR] %s" % str(e)
+        return False
     return res
 
 def getIp():
@@ -322,12 +332,14 @@ def run(proxy, user, pwd):
 
     #visitLogin(cookie)
     #print "Access login, cookie: ", cookie
-    res = userLogin(cookie, ip, user, pwd)
+    res = userLogin(cookie, False, user, pwd)
+    #res = userLogin(cookie, ip, user, pwd)
     if not res:
         print "User: %s Login fail" % user
         return False, 3
 
-    res = checkIsVoted(cookie, ip)
+    #res = checkIsVoted(cookie, ip)
+    res = checkIsVoted(cookie, False)
     if res:
         print "User: %s had voted" % user
         return False, 4
@@ -338,7 +350,7 @@ def run(proxy, user, pwd):
         "myVotes": "213"
     }
     res = vote(cookie, ip, url, data)
-    if not res or res.code == 200:
+    if res and res.code == 200:
         print "Try to vote drama"
     else:
         print "Vote drama fail"
@@ -350,7 +362,7 @@ def run(proxy, user, pwd):
         "myVotes": "222"
     }
     res = vote(cookie, ip, url, data)
-    if not res or res.code == 200:
+    if res and res.code == 200:
         print "Try to vote actor"
     else:
         print "Vote actor fail"
@@ -362,21 +374,25 @@ def run(proxy, user, pwd):
         "myVotes": "225"
     }
     res = vote(cookie, ip, url, data)
-    if not res or res.code == 200:
+    if res and res.code == 200:
         print "Try to vote actress"
     else:
         print "Vote actress fail"
         return False, 7
 
     url = "http://www.soompi.com/seoul-international-drama-awards-2014-vote/?category=drama&last=actress"
-    res = checkVoteDone(cookie, ip, url)
-    data = res.read()
-    with open("./debug/debug_home_%s.html" % user, "w") as f:
-        f.write(data)
-        f.close()
-    if re.search("You're all done voting", data):
-        hadVoted(user)
-        return True, 0
+    res = checkVoteDone(cookie, False, url)
+    #res = checkVoteDone(cookie, ip, url)
+    try:
+        data = res.read()
+        #with open("./debug/debug_home_%s.html" % user, "w") as f:
+        #    f.write(data)
+        #    f.close()
+        if re.search("You're all done voting", data):
+            hadVoted(user)
+            return True, 0
+    except Exception, e:
+        pass
 
     return False, 10
 
@@ -390,13 +406,13 @@ def runBatch(accounts, proxys, sleep_time, voted_accounts):
             print "Proxy: %s" % proxy
         user = item[0]
         pwd = item[1]
-        retry = 2
+        retry = 1
         ret, status = False, 0
         while retry > 0:
             ret, status = run(proxy, user, pwd)
             if ret or status == 4:
                 break
-            print "User: %s Vote fail, retry!" % user
+            #print "User: %s Vote fail, retry!" % user
             retry -= 1
         if ret:
             success += 1
@@ -404,6 +420,7 @@ def runBatch(accounts, proxys, sleep_time, voted_accounts):
         elif status == 4:
             voted_accounts.append([user, pwd])
         else:
+            print "User: %s vote fail!" % user
             fail_accounts.append([user, pwd])
             proxy = getProxy(proxys)
 
@@ -413,7 +430,7 @@ def runBatch(accounts, proxys, sleep_time, voted_accounts):
     return success, fail_accounts
 
 def main():
-    socket.setdefaulttimeout(30)
+    socket.setdefaulttimeout(15)
 
     sleep_time = 0
     if len(sys.argv) > 1:
@@ -423,9 +440,9 @@ def main():
     if not os.path.isdir(voted_dir):
         os.mkdir(voted_dir)
 
-    debug_dir="./debug"
-    if not os.path.isdir(debug_dir):
-        os.mkdir(debug_dir)
+    #debug_dir="./debug"
+    #if not os.path.isdir(debug_dir):
+    #    os.mkdir(debug_dir)
 
     filename = "vote.txt"
     accounts = readAccounts(filename)
