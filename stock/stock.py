@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # coding=utf-8
 
 import struct
@@ -33,7 +34,7 @@ def kdj(data, K, D, N=9, M1=3, M2=3):
     else:
         rK = float(M1-1)/M1 * K + 1.0/M1 * rRSV
         rD = float(M2-1)/M2 * D + 1.0/M2 * rK
-    rJ = 3 * K - 2 * D
+    rJ = 3 * rK - 2 * rD
 
     print rK, rD, rJ
     return rK, rD, rJ
@@ -75,8 +76,8 @@ def main():
             EMA26 = closeq
             DEA = 0.0
 
-            K = 50
-            D = 50
+            K = 50.0
+            D = 50.0
         else:
             EMA12, EMA26, DIFF, DEA, BAR = macd(EMA12, EMA26, DEA, closeq)
             
