@@ -17,6 +17,7 @@ class Transfer(object):
     TYPE_FILE       = 1
     TYPE_DIR        = 2
 
+    HEAD_LEN        = 12
     TYPE_HEAD_LEN   = 8
     CONTENT_HEAD_LEN = 12
 
@@ -68,12 +69,17 @@ class Transfer(object):
                 self._write_file(conn, filename)
 
     def _read_file(self, conn, filename, relative_path):
-        content_len = os.path.getsize(local_file)
+        content_len = os.path.getsize(filename)
         content_head = struct.pack('QI', content_len, len(relative_path))
         conn.send(content_head)
         conn.send(relative_path)
         with open(filename, 'rb') as fp:
-            self.transfer(fp, conn, content_len)
+            #self.transfer(fp, conn, content_len)
+            while True:
+                data = fp.read(1024)
+                if not data:
+                    break
+                conn.send(data)
 
     def _write_file(self, conn, filename):
         content_head = conn.recv(self.CONTENT_HEAD_LEN)
@@ -88,7 +94,7 @@ class Transfer(object):
         left = length
         while left > 0:
             read_cnt = min(left, 1024)
-            data = readfp.read(read_cnt)
+            data = readfp.recv(read_cnt)
             if not data:
                 break
             writefp.write(data)
@@ -115,7 +121,7 @@ class Server(Transfer):
 
         while True:
             try:
-                head = conn.recv(HEAD_LEN)
+                head = conn.recv(self.HEAD_LEN)
                 cmd, file1_len, file2_len = struct.unpack("III", head)
                 client_file = conn.recv(file1_len)
                 server_file = conn.recv(file2_len)
@@ -145,10 +151,10 @@ class Client(Transfer):
 
     def connect(self):
         self.sock.connect((self.host, self.port))
-    
+
     def close(self):
         self.sock.close()
-    
+
     def sendFile(client_file, server_file):
         self.writeHead(self.sock, self.CMD_SEND_FILE, client_file, server_file)
         self.read_file(self.sock, client_file)
@@ -200,6 +206,7 @@ def run_server(opt, argv):
             sys.exit(1)
 
     server = Server(opt.host, opt.port)
+    server.start()
 
 def main():
     usage = 'usage: %prog [option] [host1:]file1 [host2:]file2'
