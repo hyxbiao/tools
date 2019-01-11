@@ -48,7 +48,8 @@ class Transfer(object):
             for root, dirs, files in os.walk(local_file):
                 for name in files:
                     filename = os.path.join(root, name)
-                    relative_path = filename[len(local_file) + 1:]
+                    dirname = os.path.dirname(local_file)
+                    relative_path = filename[len(dirname) + 1:]
                     self._read_file(conn, filename, relative_path)
         elif os.path.isfile(local_file):
             conn.send(struct.pack('II', self.TYPE_FILE, 1))
@@ -58,7 +59,7 @@ class Transfer(object):
             print 'path: %s is not a file' % (local_file)
             sys.exit(1)
 
-    def write_file(self, conn, filename):
+    def write_file(self, conn, filename, remote_file):
         type_head = conn.recv(self.TYPE_HEAD_LEN)
         ftype, total_files = struct.unpack("II", type_head)
 
@@ -86,6 +87,9 @@ class Transfer(object):
         content_len, file_length = struct.unpack("QI", content_head)
         remote_relative_path = conn.recv(file_length)
         local_file = self.get_local_file(filename, remote_relative_path)
+        dirname = os.path.dirname(local_file)
+        if not os.path.isdir(dirname):
+            os.makedirs(dirname)
         print 'local file: {}, content length: {}'.format(local_file, content_len)
         with open(local_file, 'wb') as fp:
             self.transfer(conn, fp, content_len)
@@ -127,7 +131,7 @@ class Server(Transfer):
                 server_file = conn.recv(file2_len)
                 print 'cmd: %d, client_file: %s, server_file: %s' % (cmd, client_file, server_file)
                 if cmd == self.CMD_SEND_FILE:
-                    self.write_file(conn, server_file)
+                    self.write_file(conn, server_file, client_file)
                 elif cmd == self.CMD_RECV_FILE:
                     self.read_file(conn, server_file)
                 else:
@@ -154,7 +158,7 @@ class Client(Transfer):
 
     def close(self):
         self.sock.close()
-    
+
     def sendFile(self, client_file, server_file):
         self.writeHead(self.sock, self.CMD_SEND_FILE, client_file, server_file)
         self.read_file(self.sock, client_file)
@@ -162,7 +166,7 @@ class Client(Transfer):
     def recvFile(self, server_file, client_file):
         self.writeHead(self.sock, self.CMD_RECV_FILE, client_file, server_file)
         try:
-            self.write_file(self.sock, client_file)
+            self.write_file(self.sock, client_file, server_file)
         except socket.timeout:
             print 'time out'
         except Exception, e:
