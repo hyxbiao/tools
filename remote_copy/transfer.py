@@ -154,12 +154,12 @@ class Client(Transfer):
 
     def close(self):
         self.sock.close()
-
-    def sendFile(client_file, server_file):
+    
+    def sendFile(self, client_file, server_file):
         self.writeHead(self.sock, self.CMD_SEND_FILE, client_file, server_file)
         self.read_file(self.sock, client_file)
 
-    def recvFile(server_file, client_file):
+    def recvFile(self, server_file, client_file):
         self.writeHead(self.sock, self.CMD_RECV_FILE, client_file, server_file)
         try:
             self.write_file(self.sock, client_file)

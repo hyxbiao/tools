@@ -93,15 +93,15 @@ if __name__ == '__main__':
 		parser.print_help()
 		sys.exit(1)
 
-	x0, x1 = ':' in argv[0], ':' in argv[1]
-	if x0 and x1:
+	src_in_remote, dst_in_remote = ':' in argv[0], ':' in argv[1]
+	if src_in_remote and dst_in_remote:
 		print 'only support one remote host'
 		sys.exit(1)
 
-	if x0:
+	if src_in_remote:
 		host, file1 = argv[0].split(':')
 		file2 = argv[1]
-	elif x1:
+	elif dst_in_remote:
 		file1 = argv[0]
 		host, file2 = argv[1].split(':')
 	else:
@@ -113,7 +113,7 @@ if __name__ == '__main__':
 	print 'host: %s, port: %d' % (host, opt.port)
 	remote = Remote(host, opt.port)
 	remote.connect()
-	if x0:
+	if src_in_remote:
 		remote.recvFile(file1, file2)
 	else:
 		remote.sendFile(file1, file2)
