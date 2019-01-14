@@ -42,15 +42,20 @@ class Transfer(object):
     def read_file(self, conn, filename):
         local_file = os.path.abspath(os.path.expanduser(filename))
         if os.path.isdir(local_file):
+            dirname = os.path.dirname(local_file)
             total_files = [len(files) for _, _, files in os.walk(local_file)]
             total_files = sum(total_files)
+            print 'total files: {}'.format(total_files)
             conn.send(struct.pack('II', self.TYPE_DIR, total_files))
+            c = 1
             for root, dirs, files in os.walk(local_file):
                 for name in files:
                     filename = os.path.join(root, name)
-                    dirname = os.path.dirname(local_file)
                     relative_path = filename[len(dirname) + 1:]
+                    print '[{}/{}]start read file: {}, relative_path: {}'.format(
+                            c, total_files, filename, relative_path)
                     self._read_file(conn, filename, relative_path)
+                    c += 1
         elif os.path.isfile(local_file):
             conn.send(struct.pack('II', self.TYPE_FILE, 1))
             relative_path = os.path.basename(local_file)
